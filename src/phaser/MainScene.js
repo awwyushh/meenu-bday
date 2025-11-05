@@ -33,13 +33,32 @@ export default class MainScene extends Phaser.Scene {
 
 
         this.player.play("fly_anim")
-
         this.player.setCollideWorldBounds(true)
         this.player.setBounce(0.2,0.2)
         this.player.setGravityY(900)
         this.player.body.setSize(Math.round(this.player.displayWidth * 0.8), Math.round(this.player.displayHeight * 0.9))
-
         this.player.setAngle(0)
+
+        // obstacles group
+        this.obstacles = this.physics.add.group({
+            allowGravity: false,
+            immovable: true
+        })
+        this.activeRects = [];
+
+        this.spawnInterval = 1600
+        this.gapSize = 190
+        this.minGap = 100
+        this.spawnTimer = this.time.addEvent({
+            delay: this.spawnInterval,
+            callback: this.spawnRandomObstacle,
+            callbackScope: this,
+            loop: true
+        })
+
+        this.physics.add.collider(this.player, this.obstacles, () => {
+            this.scene.restart();
+        })
 
         const flap = () => {
             this.player.setVelocityY(-320)
@@ -69,6 +88,93 @@ export default class MainScene extends Phaser.Scene {
         this.hasStarted = true;
     }
 
+    spawnRandomObstacle(){
+        if(this.spawnInterval > 900){
+            this.spawnInterval -= 8;
+            this.spawnTimer.reset({
+                delay: this.spawnInterval,
+                callback: this.spawnRandomObstacle,
+                callbackScope: this,
+                loop: true
+            })
+        }
+        if(this.gapSize > this.minGap){
+            this.gapSize -= 6;
+        }
+        
+        const type = (Math.random() < 0.7) ? "pipes" : "floating"
+        
+        this.activeRects = this.activeRects.filter(r => r.right > -50)
+        
+        if(type == "pipes"){
+            console.log("Pipes called")
+            this.spawnPipePair();
+        }else{
+            // this.spawnFloating();
+        }
+    }
+    
+    spawnPipePair(){
+        const maxAttempts = 10;
+        const padTop = Math.floor(this.scale.height * 0.12)
+        const padBottom = Math.floor(this.scale.height * 0.12)
+        const minY = padTop + Math.floor(this.gapSize/2)
+        const maxY = this.scale.height - padBottom - Math.floor(this.gapSize/2)
+
+        const spawnX = this.scale.width + 60
+        const pipeW = Math.min(92, Math.floor(this.scale.width * 0.22))
+
+        for(let i=0; i<maxAttempts; i++){
+            console.log("Try: ", i)
+            const gapY = Phaser.Math.Between(minY, maxY)
+            const top = this.add.image(spawnX,gapY - (this.gapSize/2), "obstacle1").setOrigin(0.5,1)
+            const bottom = this.add.image(spawnX,gapY + (this.gapSize/2), "obstacle1").setOrigin(0.5,0)
+
+            top.setFlipY(true);
+
+            if(top.width && top.height){
+                    const scale = pipeW / top.width;
+                    top.setDisplaySize(Math.round(pipeW), Math.round(top.height * scale))
+                    bottom.setDisplaySize(Math.round(pipeW), Math.round(bottom.height * scale))
+            }
+            
+            const topRect = top.getBounds()
+            const bottomRect = bottom.getBounds()
+
+            top.destroy()
+            bottom.destroy()
+
+            const intersectsExisting = this.activeRects.some(r => Phaser.Geom.Intersects.RectangleToRectangle(r, topRect))
+            const intersectsPlayer = Phaser.Geom.Intersects.RectangleToRectangle(this.player.getBounds(), topRect) || Phaser.Geom.Intersects.RectangleToRectangle(this.player.getBounds(), bottomRect)
+
+            if(!intersectsExisting && !intersectsPlayer){
+                const topPipe = this.obstacles.create(spawnX, gapY - (this.gapSize/2), "obstacle1").setOrigin(0.5,1)
+                topPipe.setFlipY(true);
+                const bottomPipe = this.obstacles.create(spawnX, gapY + (this.gapSize/2), "obstacle1").setOrigin(0.5,0)
+
+                if(topPipe.width && topPipe.height){
+                    const scale = pipeW / topPipe.width;
+                    topPipe.setDisplaySize(Math.round(pipeW), Math.round(topPipe.height * scale))
+                    bottomPipe.setDisplaySize(Math.round(pipeW), Math.round(bottomPipe.height * scale))
+                }
+
+                const speed = - (180 + Math.min(120, Math.floor((1600 - this.spawnInterval)/6)))
+                topPipe.body.setVelocityX(speed)
+                bottomPipe.body.setVelocityX(speed)
+
+                this.activeRects.push(topPipe.getBounds())
+                this.activeRects.push(bottomPipe.getBounds())
+                
+                topPipe.once('destroy',()=>{})
+                bottomPipe.once('destroy',()=>{})
+                
+                return;
+            }
+
+
+        }
+    }
+
     update(){
         this.bg.tilePositionX += 3;
         if(!this.player) return
@@ -78,5 +184,12 @@ export default class MainScene extends Phaser.Scene {
 
         this.player.angle = Phaser.Math.Interpolation.Linear([this.player.angle, targetAngle], 0.2)
 
+        this.obstacles.getChildren().forEach(obs => {
+            if(obs.x + (obs.displayWidth || obs.width) < -80){
+                obs.destroy()
+            }
+        })
+
+        this.activeRects = this.obstacles.getChildren().map(o => o.getBounds());
     }
 }
