@@ -14,6 +14,11 @@ export default class BootScene extends Phaser.Scene {
         // audios
         this.load.audio("bgmusic", "/assets/bgmusic.mp3")
         this.load.audio("whoosh", "/assets/whoosh.wav")
+        // spritesheet
+        this.load.spritesheet("flying","/assets/flying.png",{
+            frameWidth: 345,
+            frameHeight: 372
+        })
     }
 
     create(){

@@ -96,4 +96,4 @@ export default class MenuScene extends Phaser.Scene {
             this.scene.start("MainScene");
         })
     }
-} 2
+}

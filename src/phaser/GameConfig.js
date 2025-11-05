@@ -1,4 +1,4 @@
-import Phaser, { Physics } from "phaser"
+import Phaser from "phaser"
 import BootScene from "./BootScene"
 import MainScene from "./MainScene"
 import MenuScene from "./MenuScene"
