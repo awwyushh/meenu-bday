@@ -14,6 +14,7 @@ export default class BootScene extends Phaser.Scene {
         this.load.image("obstacle1","assets/obs1.png")
         this.load.image("obstacle2","assets/obs2.png")
         this.load.image("treausre","assets/gift.png")
+        this.load.image("coin","/assets/coin.png")
         // audios
         this.load.audio("bgmusic", "/assets/bgmusic.mp3")
         this.load.audio("whoosh", "/assets/whoosh.wav")

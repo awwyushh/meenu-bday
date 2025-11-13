@@ -18,7 +18,7 @@ export default class MainScene extends Phaser.Scene {
         }
 
         const startX = Math.floor(this.scale.width * 0.25)
-        const startY = Math.floor(this.scale.width * 0.5)
+        const startY = Math.floor(this.scale.height * 0.5)
 
         this.player = this.physics.add.sprite(startX, startY, "flying", 0)
         this.player.setOrigin(0.45)
@@ -56,11 +56,14 @@ export default class MainScene extends Phaser.Scene {
             loop: true
         })
 
-        this.physics.add.collider(this.player, this.obstacles, () => {
-            this.scene.restart();
-        })
+        // this.physics.add.collider(this.player, this.obstacles, () => {
+        //     this.scene.restart();
+        // })
 
         const flap = () => {
+
+            if(this.isGameOver || this.hasWon) return;
+
             this.player.setVelocityY(-320)
             this.tweens.killTweensOf(this.player)
             this.tweens.add({
@@ -86,6 +89,89 @@ export default class MainScene extends Phaser.Scene {
         this.input.keyboard.on("keydown-SPACE", flap)
 
         this.hasStarted = true;
+        this.isGameOver = false;
+        this.hasWon = false;
+    
+
+        this.score = 0;
+        this.scoreText = this.add.text(12,12,`Cakes: ${this.score}`,{
+            font: "20px Arial",
+            color: "#ffa6a6ff",
+            stroke: "#000000",
+            strokeThickness: 4
+        }).setDepth(50).setScrollFactor(0);
+
+        this.coinGroup = this.physics.add.group({
+            allowGravity: false,
+            immovable: true
+        })
+        this.physics.add.overlap(this.player, this.coinGroup, this.collectCoin, null, this)
+        
+        this.coinSpawnTimer = this.time.addEvent({
+            delay: Phaser.Math.Between(1200,2200),
+            callback: () => {
+                this.coinSpawnTimer.delay = Phaser.Math.Between(1200,2200)
+                this.spawnCoin()
+            },
+            callbackScope: this,
+            loop: true
+        })
+
+        this.physics.add.collider(this.player, this.obstacles, this.onGameOver, null, this)
+
+    }
+    
+    spawnCoin(){
+        const spawnX = this.scale.width + 60;
+        const coinW = 56
+        const attempts = 8
+        const padTop = Math.floor(this.scale.height * 0.19)
+        const padBottom = Math.floor(this.scale.height * 0.19)
+
+        for(let i=0; i<attempts; i++){
+            const y = Phaser.Math.Between(padTop, this.scale.height - padBottom)
+            // temp
+            const tmp = this.add.image(spawnX, y, "coin").setOrigin(0.5)
+            if(tmp.width && tmp.height){
+                    const scale = coinW / tmp.width;
+                    tmp.setDisplaySize(Math.round(coinW), Math.round(tmp.height * scale))
+            }
+            const rect = tmp.getBounds()
+            tmp.destroy()
+
+            // reject if intersects
+            const intersectsExisting = this.activeRects.some(r => Phaser.Geom.Intersects.RectangleToRectangle(r, rect))
+            const intersectsPlayer = Phaser.Geom.Intersects.RectangleToRectangle(this.player.getBounds(), rect)
+
+            const margin = Math.max(36, Math.floor(this.scale.width * 0.06))
+            let tooClose = false
+            for(let r of this.activeRects){
+                const cloned = Phaser.Geom.Rectangle.Clone(r)
+                Phaser.Geom.Rectangle.Inflate(cloned,margin,margin)
+                if(Phaser.Geom.Intersects.RectangleToRectangle(cloned, rect)) {
+                    tooClose = true;
+                    break;
+                }
+            }
+
+
+            if(!intersectsExisting && !intersectsPlayer && !tooClose){
+                const coin = this.coinGroup.create(spawnX, y, "coin").setOrigin(0.5)
+
+                if(coin.width && coin.height){
+                    const scale = coinW / coin.width;
+                    coin.setDisplaySize(Math.round(coinW), Math.round(coin.height * scale))
+                }
+
+                const speed = - (180 + Math.min(120, Math.floor((1600 - this.spawnInterval)/6)))
+                coin.body.setVelocityX(speed)
+
+                this.activeRects.push(coin.getBounds())
+                console.log("Coin shown")
+                return;
+            }
+        }
+
     }
 
     spawnRandomObstacle(){
@@ -175,6 +261,76 @@ export default class MainScene extends Phaser.Scene {
         }
     }
 
+    collectCoin(player,coin){
+
+        if(!coin || !coin.active) return;
+        if(coin.body && coin.body.enable) coin.body.enable = false
+        coin.setActive(false)
+        coin.setVisible(false)
+        try {
+            this.sound.play("whoosh")
+        } catch(e) {
+            console.log(e)
+            // ignore            
+        }
+        this.tweens.add({
+            targets: coin,
+            scale: 1.4,
+            alpha: 0,
+            duration: 220,
+            ease: "Power1",
+            onComplete: () => {
+                coin.destroy();
+            }
+        })
+        coin.destroy()
+        this.score += 1 
+        this.scoreText.setText(`Cakes: ${this.score}`)
+
+        if(this.score >= 10 && !this.hasWon){
+            this.onWin()
+        }
+    }
+    
+    onGameOver(player, obstacle){
+        console.log("onGameOver called")
+        if(this.isGameOver || this.hasWon) return;
+        this.isGameOver = true
+
+        this.physics.pause()
+        if(this.spawnTimer) this.spawnTimer.remove(false);
+        if(this.coinSpawnTimer) this.coinSpawnTimer.remove(false);
+
+        if(this.player) this.player.setTint(0xff4444);
+
+        const cx = this.cameras.main.centerX
+        const cy = this.cameras.main.centerY
+
+        const overlay = this.add.rectangle(cx, cy, this.scale.width, this.scale.height, 0x000000, 0.6).setDepth(100)
+        const title = this.add.text(cx, cy - 40, 'Arereee Jaan', {
+            font: '32px Arial',
+            color: '#ffffff'
+        }).setOrigin(0.5).setDepth(101)
+
+        const btnStyle = {
+            font: '20px Arial',
+            color: "#000000",
+            backgroundColor: "#ffb3d1",
+            padding: {x:14, y:8}
+        };
+
+        const retry = this.add.text(cx + 49,cy+36, 'Firse', btnStyle).setOrigin(0.5).setDepth(101).setInteractive({useHandCursor: true})
+        retry.on("pointerup",()=>{
+            this.scene.restart()
+        })
+
+        const menu = this.add.text(cx - 49,cy+36, 'Menu', btnStyle).setOrigin(0.5).setDepth(101).setInteractive({useHandCursor: true})
+        menu.on("pointerup",()=>{
+            this.scene.start('MenuScene')
+        })
+
+    }
+
     update(){
         this.bg.tilePositionX += 3;
         if(!this.player) return
@@ -190,6 +346,10 @@ export default class MainScene extends Phaser.Scene {
             }
         })
 
-        this.activeRects = this.obstacles.getChildren().map(o => o.getBounds());
+        this.coinGroup.getChildren().forEach(c => {
+            if (c.x + (c.displayWidth || c.width) < -80) c.destroy();
+        })
+
+        this.activeRects = this.obstacles.getChildren().map(o => o.getBounds()).concat(this.coinGroup.getChildren().map(c => c.getBounds()));
     }
 }
