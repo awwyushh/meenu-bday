@@ -1,62 +1,76 @@
+/* Reset / base */
 html, body, #root {
     height: 100%;
-    margin: 0;
-    padding: 0;
+    margin: 0 !important;
+    padding: 0 !important;
     box-sizing: border-box;
     -webkit-font-smoothing: antialiased;
-    background: #000; /* fallback behind canvas */
+    background: #000;
+    overflow: hidden; /* prevent page scrolling / browser chrome shifts */
 }
-
 *, *::before, *::after { box-sizing: inherit; }
 
-/* Phaser mount element - center canvas on desktop, fill on mobile */
+/* Phaser mount element - center game area and remove any safe-area gaps */
 #game-container {
     position: fixed;
-    inset: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    inset: 0; /* fallback shorthand */
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #000;   /* ensures no white flash */
+    background: #000;
     overflow: hidden;
     -webkit-tap-highlight-color: transparent;
+    padding: 0 !important;
+    margin: 0 !important;
 }
 
-/* Default canvas sizing: keep portrait aspect, centered on larger screens.
-   Canvas will scale down/up but preserve aspect via object-fit */
-#game-container > canvas {
-    display: block;
-    width: min(520px, 92vw);   /* limit width on large screens */
-    height: auto;
-    max-height: 90vh;         /* leave room for UI chrome */
-    object-fit: contain;
-    margin: 0;
-    padding: 0;
-    border: 0;
-    touch-action: none;       /* prevent browser gestures interfering with game */
-    -webkit-user-select: none;
-    user-select: none;
+/* Ensure no automatic safe-area padding (iOS) */
+#game-container,
+#game-container * {
+    padding: 0 !important;
+    margin: 0 !important;
 }
 
-/* If canvas is smaller than container, ensure it's visually centered */
-#game-container { align-items: center; justify-content: center; }
-
-/* Mobile: let canvas fill viewport (use cover to avoid letterboxing) */
-@media (max-width: 480px) {
-    #game-container > canvas {
-        width: 100vw !important;
-        height: 100vh !important;
-        max-height: none;
-        object-fit: cover;
-    }
+/* Make any canvas inside the container preserve the game's aspect/* filepath: /home/ayush/Games/meenu-bday/src/index.css */
+/* Reset / base */
+html, body, #root {
+    height: 100%;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box;
+    -webkit-font-smoothing: antialiased;
+    background: #000;
+    overflow: hidden; /* prevent page scrolling / browser chrome shifts */
 }
+*, *::before, *::after { box-sizing: inherit; }
 
-/* If Phaser injects a wrapper div around canvas, ensure it doesn't add gaps */
-#game-container > div {
+/* Phaser mount element - center game area and remove any safe-area gaps */
+#game-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    inset: 0; /* fallback shorthand */
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 100%;
-    height: 100%;
-    padding: 0;
-    margin: 0;
+    background: #000;
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+    padding: 0 !important;
+    margin: 0 !important;
 }
+
+/* Ensure no automatic safe-area padding (iOS) */
+#game-container,
+#game-container * {
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* Make any canvas inside the container preserve the game's aspect
